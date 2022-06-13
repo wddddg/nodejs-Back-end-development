@@ -1,5 +1,7 @@
 const express = require( 'express' )
 const bodyParser = require('body-parser')
+const multer = require('multer')
+const upload = multer({dest:'uploads/'})
 
 
 const app = express()
@@ -73,12 +75,15 @@ app.get('queryText', (req,response) =>{
 	})	
 })
 
-app.post('/addText', (req,response) =>{
+app.post('/addText',upload.single('avatar') ,(req,response) =>{
 	let {title,content,userId} = req.body
- 	knex('essay').insert({title,content,userId}).then(res =>{
-		console.log(res)
-		response.send(res)
-	})	
+ 	knex('essay').insert({title,content,userId,img:req.file.filename}).then(res =>{
+		 if(res.length){
+			response.send(new successModel({msg:'上传成功',data:res}))
+		 }else{
+			response.send(new errorModel({msg:'失败',data:res}))
+		 }
+	})
 })
 
 app.post('/updataText',(req,response) =>{
