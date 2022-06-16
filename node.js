@@ -1,6 +1,8 @@
 const express = require( 'express' )
 const bodyParser = require('body-parser')
 const multer = require('multer')
+const fs = require('fs')
+const path = require('path')
 const upload = multer({dest:'uploads/'})
 
 
@@ -14,11 +16,25 @@ const errorModel = require('./module/error')
 
 const knex = require('./utils/knex')
 
-// app.get('/',(req,res) => {
-//     res.setHeader('Access-Control-Allow-Origin','*')
-//     console.log('有人访问了');
-//     res.send('ok')    
-// })
+
+app.get('/uploads', (req, res, next) => {
+	if (req.query.img === 'undefined') return res.send(null)
+    const filePath = path.resolve(__dirname, `./uploads/${req.query.img}`);
+    // 给客户端返回一个文件流 type类型
+    // res.set( 'content-type', {"png": "image/png","jpg": "image/jpeg"} );//设置返回类型
+    var stream = fs.createReadStream( filePath );
+    var responseData = [];//存储文件流
+    if (stream) {//判断状态
+        stream.on( 'data', function( chunk ) {
+          responseData.push( chunk );
+        });
+        stream.on( 'end', function() {
+           var finalData = Buffer.concat( responseData );
+           res.write( finalData );
+           res.end();
+        });
+    }
+})
 
 app.use('*',function (req, res, next) {
 	res.header('Access-Control-Allow-Origin', '*'); //这个表示任意域名都可以访问，这样写不能携带cookie了。
@@ -68,16 +84,16 @@ app.get('/chak',(req,res) =>{
     knex('userdata').select().where({}).then(response => res.send(new successModel({msg:'调用成功返回所有',data:response})))
 })
 
-app.get('queryText', (req,response) =>{
-	knex('essay').select().where({isdel:0}).then(res =>{
-		console.log(res)
+app.get('/queryText', async (req,response) =>{
+	await knex('essay').select().where({isdel:1})
+	.then(res =>{
 		response.send(res)
-	})	
+	})
 })
 
 app.post('/addText',upload.single('avatar') ,(req,response) =>{
-	let {title,content,userId} = req.body
- 	knex('essay').insert({title,content,userId,img:req.file.filename}).then(res =>{
+	let {title,content,userId,username,contentHTML} = req.body
+ 	knex('essay').insert({title,content,userId,username,contentHTML,img:req.file.filename}).then(res =>{
 		 if(res.length){
 			response.send(new successModel({msg:'上传成功',data:res}))
 		 }else{
