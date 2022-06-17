@@ -1,13 +1,13 @@
-const express = require( 'express' )
+const express = require('express')
 const bodyParser = require('body-parser')
 const multer = require('multer')
 const fs = require('fs')
 const path = require('path')
-const upload = multer({dest:'uploads/'})
+const upload = multer({ dest: 'uploads/' })
 
 
 const app = express()
-app.use(bodyParser.urlencoded({extended:true}))
+app.use(bodyParser.urlencoded({ extended: true }))
 app.use(bodyParser.json());
 const port = 3002
 
@@ -19,26 +19,26 @@ const knex = require('./utils/knex')
 
 app.get('/uploads', (req, res, next) => {
 	if (req.query.img === 'undefined') return res.send(null)
-    const filePath = path.resolve(__dirname, `./uploads/${req.query.img}`);
-    // 给客户端返回一个文件流 type类型
-    // res.set( 'content-type', {"png": "image/png","jpg": "image/jpeg"} );//设置返回类型
-    var stream = fs.createReadStream( filePath );
-    var responseData = [];//存储文件流
-    if (stream) {//判断状态
-        stream.on( 'data', function( chunk ) {
-          responseData.push( chunk );
-        });
-        stream.on( 'end', function() {
-           var finalData = Buffer.concat( responseData );
-           res.write( finalData );
-           res.end();
-        });
-    }
+	const filePath = path.resolve(__dirname, `./uploads/${req.query.img}`);
+	// 给客户端返回一个文件流 type类型
+	// res.set( 'content-type', {"png": "image/png","jpg": "image/jpeg"} );//设置返回类型
+	var stream = fs.createReadStream(filePath);
+	var responseData = [];//存储文件流
+	if (stream) {//判断状态
+		stream.on('data', function (chunk) {
+			responseData.push(chunk);
+		});
+		stream.on('end', function () {
+			var finalData = Buffer.concat(responseData);
+			res.write(finalData);
+			res.end();
+		});
+	}
 })
 
-app.use('*',function (req, res, next) {
+app.use('*', function (req, res, next) {
 	res.header('Access-Control-Allow-Origin', '*'); //这个表示任意域名都可以访问，这样写不能携带cookie了。
-//   res.header('Access-Control-Allow-Origin', 'localhost:3001'); //这样写，只有www.baidu.com 可以访问。
+	//   res.header('Access-Control-Allow-Origin', 'localhost:3001'); //这样写，只有www.baidu.com 可以访问。
 	res.header('Access-Control-Allow-Headers', 'Content-Type, Content-Length, Authorization, Accept, X-Requested-With , yourHeaderFeild');
 	res.header('Access-Control-Allow-Methods', 'PUT, POST, GET, DELETE, OPTIONS');//设置方法
 	// if (req.method == 'OPTIONS') {
@@ -50,97 +50,128 @@ app.use('*',function (req, res, next) {
 	next();
 });
 
-app.post('/register',(req,res) =>{
-    let {username,password} = req.body
-	knex('userdata').select().where({username}).andWhere({password}).then(response => {
-        if(response.length){
-            res.send(new errorModel({msg:'账号已注册'}))
-        }else{
-            knex('userdata').insert({username,password}).then(response => res.send(new successModel({msg:'添加成功'})))
-        }
-    })
-})
-
-app.post('/login',(req,res) =>{
-    let {username,password} = req.body
-    knex('userdata').select().where({username}).andWhere({password}).then(response => {
-        if(response.length){
-            res.send(new successModel({msg:'登录成功',data:response[0]}))
-        }else{
-            res.send(new errorModel({msg:'登录失败'}))
-        }
-    })
-})
-
-app.get('/chak',(req,res) =>{
-    // let {username,password} = req.query
-    // knex('userdata').select().where({username}).andWhere({password}).then(response => {
-    //     if(response.length){
-    //         res.send(new successModel({msg:'登录成功'}))
-    //     }else{
-    //         res.send(new errorModel({msg:'登录失败'}))
-    //     }
-    // })
-    knex('userdata').select().where({}).then(response => res.send(new successModel({msg:'调用成功返回所有',data:response})))
-})
-
-app.get('/queryText', async (req,response) =>{
-	await knex('essay').select().where({isdel:1})
-	.then(res =>{
-		response.send(res)
+app.post('/register', (req, res) => {
+	let { username, password } = req.body
+	knex('userdata').select().where({ username }).andWhere({ password }).then(response => {
+		if (response.length) {
+			res.send(new errorModel({ msg: '账号已注册' }))
+		} else {
+			knex('userdata').insert({ username, password }).then(response => res.send(new successModel({ msg: '添加成功' })))
+		}
 	})
 })
 
-app.post('/addText',upload.single('avatar') ,(req,response) =>{
-	let {title,content,userId,username,contentHTML} = req.body
- 	knex('essay').insert({title,content,userId,username,contentHTML,img:req.file.filename}).then(res =>{
-		 if(res.length){
-			response.send(new successModel({msg:'上传成功',data:res}))
-		 }else{
-			response.send(new errorModel({msg:'失败',data:res}))
-		 }
+app.post('/login', (req, res) => {
+	let { username, password } = req.body
+	knex('userdata').select().where({ username }).andWhere({ password }).then(response => {
+		if (response.length) {
+			res.send(new successModel({ msg: '登录成功', data: response[0] }))
+		} else {
+			res.send(new errorModel({ msg: '登录失败' }))
+		}
 	})
 })
 
-app.post('/updataText',(req,response) =>{
-	let {userId,content,img,textId} = req.body
-	knex('essay').where({userId,textId}).update({content,img}).then(res =>{
-		console.log(res)
-		response.send(res)
+app.get('/chak', (req, res) => {
+	// let {username,password} = req.query
+	// knex('userdata').select().where({username}).andWhere({password}).then(response => {
+	//     if(response.length){
+	//         res.send(new successModel({msg:'登录成功'}))
+	//     }else{
+	//         res.send(new errorModel({msg:'登录失败'}))
+	//     }
+	// })
+	knex('userdata').select().where({}).then(response => res.send(new successModel({ msg: '调用成功返回所有', data: response })))
+})
+
+app.get('/queryText', (req, response) => {
+	let { userId } = req.query
+	if (userId) {
+		knex('essay').select().where({ isdel: 1 }).andWhere({ userId })
+			.then(res => {
+				response.send(res)
+			})
+	} else {
+		knex('essay').select().where({ isdel: 1 })
+			.then(res => {
+				response.send(res)
+			})
+	}
+})
+
+app.post('/addText', upload.single('avatar'), (req, response) => {
+	let { title, content, userId, username, contentHTML } = req.body
+	knex('essay').insert({ title, content, userId, username, contentHTML, img: req.file.filename }).then(res => {
+		if (res.length) {
+			response.send(new successModel({ msg: '上传成功', data: res }))
+		} else {
+			response.send(new errorModel({ msg: '失败', data: res }))
+		}
+	})
+})
+
+app.post('/updataText', upload.single('avatar'), (req, response) => {
+	let { userId, content, img, textId, contentHTML, title } = req.body
+	knex('essay').where({ userId, id: textId }).update({ content, img: req.file.filename, contentHTML, title }).then(res => {
+		if (res) {
+			const filePath = path.resolve(__dirname, `./uploads/${img}`);
+			fs.unlink(filePath, function (error) {
+				if (error) {
+					console.log(error);
+					return false;
+				}
+			})
+			response.send(new successModel({ msg: '修改成功', data: res }))
+		} else {
+			response.send(new errorModel({ msg: '失败修改', data: res }))
+		}
 	})
 })
 
 
-app.post('/delText', (req,response) =>{ 
-	let {userId,textId,isadmin} = req.body
-	if (isadmin) {
-		knex('essay').where({userId,textId}).del().then(res =>{
-			console.log(res)
-			response.send(res)
+app.post('/delText', (req, response) => {
+	let { userId, textId, isadmin, img } = req.body
+	if (isadmin === '57') {
+		knex('essay').where({ userId, id: textId }).del().then(res => {
+			if (res) {
+				response.send(new successModel({ msg: '删除成功', data: res }))
+				const filePath = path.resolve(__dirname, `./uploads/${img}`);
+				fs.unlink(filePath, function (error) {
+					if (error) {
+						console.log(error);
+						return false;
+					}
+				})
+			} else {
+				response.send(new errorModel({ msg: '删除失败', data: res }))
+			}
 		})
-	}else{
-		knex('essay').where({userId,textId}).update({isdel:1}).then(res =>{
-			console.log(res)
-			response.send(res)
+	} else {
+		knex('essay').where({ userId, id: textId }).update({ isdel: 0 }).then(res => {
+			if (res) {
+				response.send(new successModel({ msg: '删除成功', data: res }))
+			} else {
+				response.send(new errorModel({ msg: '删除失败', data: res }))
+			}
 		})
 	}
 })
 
-app.get('/queryAllUser', (req,response) => {
-	knex('userdata').select().where({}).then(res =>{
+app.get('/queryAllUser', (req, response) => {
+	knex('userdata').select().where({}).then(res => {
 		console.log(res)
 		response.send(res)
 	})
 })
 
 
-app.post('/queryUser' ,(req,response) =>{
-	let {userId} = req.body
-	knex('userdata').select().where({userId}).then(res =>{
+app.post('/queryUser', (req, response) => {
+	let { userId } = req.body
+	knex('userdata').select().where({ userId }).then(res => {
 		console.log(res)
 		response.send(res)
 	})
 })
 
 
-app.listen(port,()=>console.log(`服务器已开启端口号为${port}`))
+app.listen(port, () => console.log(`服务器已开启端口号为${port}`))
