@@ -18,7 +18,7 @@ const knex = require('./utils/knex')
 
 
 app.get('/uploads', (req, res, next) => {
-	if (req.query.img === 'undefined') return res.send(null)
+	if (req.query.img === 'undefined' || req.query.img === 'null' || req.query.img == '') return res.send(null)
 	const filePath = path.resolve(__dirname, `./uploads/${req.query.img}`);
 	// 给客户端返回一个文件流 type类型
 	// res.set( 'content-type', {"png": "image/png","jpg": "image/jpeg"} );//设置返回类型
@@ -73,14 +73,6 @@ app.post('/login', (req, res) => {
 })
 
 app.get('/chak', (req, res) => {
-	// let {username,password} = req.query
-	// knex('userdata').select().where({username}).andWhere({password}).then(response => {
-	//     if(response.length){
-	//         res.send(new successModel({msg:'登录成功'}))
-	//     }else{
-	//         res.send(new errorModel({msg:'登录失败'}))
-	//     }
-	// })
 	knex('userdata').select().where({}).then(response => res.send(new successModel({ msg: '调用成功返回所有', data: response })))
 })
 
@@ -158,19 +150,90 @@ app.post('/delText', (req, response) => {
 })
 
 app.get('/queryAllUser', (req, response) => {
-	knex('userdata').select().where({}).then(res => {
-		console.log(res)
-		response.send(res)
+	knex('userdata').select().where({}).then(async res => {
+		for (let i = 0; i < res.length; i++) {
+			await knex('essay').select().where({ isdel: 1 }).andWhere({ userId: res[i].id }).then(ress => res[i].essayLength = ress.length)
+		}
+		response.send(new successModel({ msg: '查询成功', data: res }))
 	})
 })
 
+app.post('/delUser', (req, response) => {
+	let { userId, isadmin } = req.body
+	if (isadmin === '57') {
+		knex('userdata').where({ id: userId }).del().then(res => {
+			response.send(new successModel({ msg: '删除用户成功', data: res }))
+		})
+	} else {
+		response.send(new errorModel({ msg: '您不是管理员,没权限' }))
+	}
+})
+
+app.post('/setAdmin', (req, response) => {
+	let { userId, isadmin } = req.body
+	if (isadmin === '57') {
+		knex('userdata').where({ id: userId }).update({ isadmin: '57' }).then(res => {
+			response.send(new successModel({ msg: '修改用户成功', data: res }))
+		})
+	} else {
+		response.send(new errorModel({ msg: '您不是管理员,没权限' }))
+	}
+})
+
+app.post('/updataAdminPassword', (req, response) => {
+	let { userId, newPassword, oldPassword } = req.body
+	knex('userdata').where({ id: userId, password: oldPassword }).update({ password: newPassword }).then(res => {
+		if (res) {
+			response.send(new successModel({ msg: '修改密码成功', data: res }))
+		} else {
+			response.send(new errorModel({ msg: '修改密码失败,请查看密码是否输入正确' }))
+		}
+	})
+})
+
+app.post('/uploadsAvatar', upload.single('avatar'), (req, response) => {
+	let { userId, icons } = req.body
+	knex('userdata').where({ id: userId }).update({ icon: req.file.filename }).then(res => {
+		const filePath = path.resolve(__dirname, `./uploads/${icons}`);
+		fs.unlink(filePath, function (error) {
+			if (error) {
+				console.log(error);
+				return false;
+			}
+		})
+		return knex('userdata').where({ id: userId }).select()
+	}).then(res => {
+		response.send(new successModel({ msg: '修改用户成功', data: res }))
+	})
+})
 
 app.post('/queryUser', (req, response) => {
 	let { userId } = req.body
 	knex('userdata').select().where({ userId }).then(res => {
-		console.log(res)
 		response.send(res)
 	})
+})
+
+app.get('/queryAllLength', async (req, response) => {
+	let allLength = {
+		textNumber: 0,
+		userNumber: 0,
+		isadminNumber: 0,
+		delTextNumber: 0
+	}
+	await knex('userdata').select().where({}).then(res => {
+		allLength.userNumber = res.length
+	})
+	await knex('userdata').select().where({ isadmin: 57 }).then(res => {
+		allLength.isadminNumber = res.length
+	})
+	await knex('essay').select().where({ isdel: 1 }).then(res => {
+		allLength.textNumber = res.length
+	})
+	await knex('essay').select().where({ isdel: 0 }).then(res => {
+		allLength.delTextNumber = res.length
+	})
+	response.send(allLength)
 })
 
 
