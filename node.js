@@ -20,20 +20,24 @@ const knex = require('./utils/knex')
 app.get('/uploads', (req, res, next) => {
 	if (req.query.img === 'undefined' || req.query.img === 'null' || req.query.img == '') return res.send(null)
 	const filePath = path.resolve(__dirname, `./uploads/${req.query.img}`);
-	// 给客户端返回一个文件流 type类型
-	// res.set( 'content-type', {"png": "image/png","jpg": "image/jpeg"} );//设置返回类型
-	var stream = fs.createReadStream(filePath);
-	var responseData = [];//存储文件流
-	if (stream) {//判断状态
-		stream.on('data', function (chunk) {
-			responseData.push(chunk);
-		});
-		stream.on('end', function () {
-			var finalData = Buffer.concat(responseData);
-			res.write(finalData);
-			res.end();
-		});
-	}
+	fs.readFile(filePath, (err, data) => {
+		if (!err) {
+			var stream = fs.createReadStream(filePath);
+			var responseData = [];//存储文件流
+			if (stream) {//判断状态
+				stream.on('data', function (chunk) {
+					responseData.push(chunk);
+				});
+				stream.on('end', function () {
+					var finalData = Buffer.concat(responseData);
+					res.write(finalData);
+					res.end();
+				});
+			}
+		} else {
+			return res.send(err)
+		}
+	})
 })
 
 app.use('*', function (req, res, next) {
@@ -58,6 +62,8 @@ app.post('/register', (req, res) => {
 		} else {
 			knex('userdata').insert({ username, password }).then(response => res.send(new successModel({ msg: '添加成功' })))
 		}
+	}).catch(error => {
+		res.send(error)
 	})
 })
 
@@ -69,11 +75,15 @@ app.post('/login', (req, res) => {
 		} else {
 			res.send(new errorModel({ msg: '登录失败' }))
 		}
+	}).catch(error => {
+		res.send(error)
 	})
 })
 
 app.get('/chak', (req, res) => {
-	knex('userdata').select().where({}).then(response => res.send(new successModel({ msg: '调用成功返回所有', data: response })))
+	knex('userdata').select().where({}).then(response => res.send(new successModel({ msg: '调用成功返回所有', data: response }))).catch(error => {
+		res.send(error)
+	})
 })
 
 app.get('/queryText', (req, response) => {
@@ -82,11 +92,15 @@ app.get('/queryText', (req, response) => {
 		knex('essay').select().where({ isdel: 1 }).andWhere({ userId })
 			.then(res => {
 				response.send(res)
+			}).catch(error => {
+				response.send(error)
 			})
 	} else {
 		knex('essay').select().where({ isdel: 1 })
 			.then(res => {
 				response.send(res)
+			}).catch(error => {
+				response.send(error)
 			})
 	}
 })
@@ -99,6 +113,8 @@ app.post('/addText', upload.single('avatar'), (req, response) => {
 		} else {
 			response.send(new errorModel({ msg: '失败', data: res }))
 		}
+	}).catch(error => {
+		response.send(error)
 	})
 })
 
@@ -117,6 +133,8 @@ app.post('/updataText', upload.single('avatar'), (req, response) => {
 		} else {
 			response.send(new errorModel({ msg: '失败修改', data: res }))
 		}
+	}).catch(error => {
+		response.send(error)
 	})
 })
 
@@ -137,6 +155,8 @@ app.post('/delText', (req, response) => {
 			} else {
 				response.send(new errorModel({ msg: '删除失败', data: res }))
 			}
+		}).catch(error => {
+			response.send(error)
 		})
 	} else {
 		knex('essay').where({ userId, id: textId }).update({ isdel: 0 }).then(res => {
@@ -145,6 +165,8 @@ app.post('/delText', (req, response) => {
 			} else {
 				response.send(new errorModel({ msg: '删除失败', data: res }))
 			}
+		}).catch(error => {
+			response.send(error)
 		})
 	}
 })
@@ -155,6 +177,8 @@ app.get('/queryAllUser', (req, response) => {
 			await knex('essay').select().where({ isdel: 1 }).andWhere({ userId: res[i].id }).then(ress => res[i].essayLength = ress.length)
 		}
 		response.send(new successModel({ msg: '查询成功', data: res }))
+	}).catch(error => {
+		response.send(error)
 	})
 })
 
@@ -163,6 +187,8 @@ app.post('/delUser', (req, response) => {
 	if (isadmin === '57') {
 		knex('userdata').where({ id: userId }).del().then(res => {
 			response.send(new successModel({ msg: '删除用户成功', data: res }))
+		}).catch(error => {
+			response.send(error)
 		})
 	} else {
 		response.send(new errorModel({ msg: '您不是管理员,没权限' }))
@@ -174,6 +200,8 @@ app.post('/setAdmin', (req, response) => {
 	if (isadmin === '57') {
 		knex('userdata').where({ id: userId }).update({ isadmin: '57' }).then(res => {
 			response.send(new successModel({ msg: '修改用户成功', data: res }))
+		}).catch(error => {
+			response.send(error)
 		})
 	} else {
 		response.send(new errorModel({ msg: '您不是管理员,没权限' }))
@@ -188,6 +216,8 @@ app.post('/updataAdminPassword', (req, response) => {
 		} else {
 			response.send(new errorModel({ msg: '修改密码失败,请查看密码是否输入正确' }))
 		}
+	}).catch(error => {
+		response.send(error)
 	})
 })
 
@@ -204,6 +234,8 @@ app.post('/uploadsAvatar', upload.single('avatar'), (req, response) => {
 		return knex('userdata').where({ id: userId }).select()
 	}).then(res => {
 		response.send(new successModel({ msg: '修改用户成功', data: res }))
+	}).catch(error => {
+		response.send(error)
 	})
 })
 
@@ -211,6 +243,8 @@ app.post('/queryUser', (req, response) => {
 	let { userId } = req.body
 	knex('userdata').select().where({ userId }).then(res => {
 		response.send(res)
+	}).catch(error => {
+		response.send(error)
 	})
 })
 
@@ -223,15 +257,23 @@ app.get('/queryAllLength', async (req, response) => {
 	}
 	await knex('userdata').select().where({}).then(res => {
 		allLength.userNumber = res.length
+	}).catch(error => {
+		response.send(error)
 	})
 	await knex('userdata').select().where({ isadmin: 57 }).then(res => {
 		allLength.isadminNumber = res.length
+	}).catch(error => {
+		response.send(error)
 	})
 	await knex('essay').select().where({ isdel: 1 }).then(res => {
 		allLength.textNumber = res.length
+	}).catch(error => {
+		response.send(error)
 	})
 	await knex('essay').select().where({ isdel: 0 }).then(res => {
 		allLength.delTextNumber = res.length
+	}).catch(error => {
+		response.send(error)
 	})
 	response.send(allLength)
 })
