@@ -120,8 +120,8 @@ app.post('/addText', upload.single('avatar'), (req, response) => {
 
 app.post('/updataText', upload.single('avatar'), (req, response) => {
 	let { userId, content, img, textId, contentHTML, title } = req.body
-	knex('essay').where({ userId, id: textId }).update({ content, img: req.file.filename, contentHTML, title }).then(res => {
-		if (res) {
+	knex('essay').where({ userId, id: textId }).update({ content, img: req?.file?.filename != undefined ? req.file.filename : img, contentHTML, title }).then(res => {
+		if (res && req?.file?.filename != undefined) {
 			const filePath = path.resolve(__dirname, `./uploads/${img}`);
 			fs.unlink(filePath, function (error) {
 				if (error) {
@@ -241,7 +241,7 @@ app.post('/uploadsAvatar', upload.single('avatar'), (req, response) => {
 
 app.post('/queryUser', (req, response) => {
 	let { userId } = req.body
-	knex('userdata').select().where({ userId }).then(res => {
+	knex('userdata').select().where({ id: userId }).then(res => {
 		response.send(res)
 	}).catch(error => {
 		response.send(error)
