@@ -121,14 +121,16 @@ app.post('/addText', upload.single('avatar'), (req, response) => {
 app.post('/updataText', upload.single('avatar'), (req, response) => {
 	let { userId, content, img, textId, contentHTML, title } = req.body
 	knex('essay').where({ userId, id: textId }).update({ content, img: req?.file?.filename != undefined ? req.file.filename : img, contentHTML, title }).then(res => {
-		if (res && req?.file?.filename != undefined) {
-			const filePath = path.resolve(__dirname, `./uploads/${img}`);
-			fs.unlink(filePath, function (error) {
-				if (error) {
-					console.log(error);
-					return false;
-				}
-			})
+		if (res) {
+			if (req?.file?.filename != undefined) {
+				const filePath = path.resolve(__dirname, `./uploads/${img}`);
+				fs.unlink(filePath, function (error) {
+					if (error) {
+						console.log(error);
+						return false;
+					}
+				})
+			}
 			response.send(new successModel({ msg: '修改成功', data: res }))
 		} else {
 			response.send(new errorModel({ msg: '失败修改', data: res }))
